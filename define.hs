@@ -4,7 +4,7 @@
 import Control.Applicative
 import Data.List 
 import Data.Char
-import Here
+import Language.Haskell.Meta.QQ.Here
 import System
 
 mkTuplize nm (mkType, mkValue) depth
