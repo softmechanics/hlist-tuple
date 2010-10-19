@@ -4,6 +4,7 @@
 import Control.Applicative
 import Data.List 
 import Data.Char
+import Text.Printf
 import Language.Haskell.Meta.QQ.Here
 import System
 
@@ -19,6 +20,26 @@ mkIsTuple depth
   = unwords ["instance IsTuple", tuple, "HTrue where\n  isTuple _ = hTrue"]
   where tuple = mkTuple depth
 
+mkTupler :: Int -> String
+mkTupler length
+  = unwords ["instance Tupler", hnat, tuplerT, "where\n  tupler _ = ", tuplerV]
+  where hnat = mkHNat length
+        tuplerT = mkTuplerT length
+        tuplerV = mkTuplerV length
+
+mkHNat :: Int -> String
+mkHNat length = foldr (printf "(%s %s)") "HZero" $ take length $ repeat "HSucc"
+
+mkTuplerT :: Int -> String
+mkTuplerT length = printf "(%s -> %s)" f tuple
+  where f = intercalate " -> " tys
+        tuple = paren $ intercalate "," tys
+        tys = hTypes length
+        
+paren s = "(" ++ s ++ ")"        
+        
+mkTuplerV length = paren $ take (length-1) $ repeat ',' 
+
 tuplizeLvPairsList = mkTuplize "Tuple" (lvTypesList, lvValuesList)
 tuplizeHList = mkTuplize "Tuple" (hTypesList, hValuesList)
 
@@ -28,6 +49,7 @@ tuplizeHLists n = map tuplizeHList [1..n]
 untuplizeHLists n = map untuplizeHList [2..n] -- can't define 1, because all other overlap and break fundeps
 tuplizeLvPairsLists n = map tuplizeLvPairsList [1..n]
 isTuples n = map mkIsTuple [2..n]
+tuplers n = map mkTupler [2..n]
 
 lvTypesList n = "(Record " ++ lst ++ ")"
   where lst = foldr1 mkHCons $ lvTypes n ++ ["HNil"]
@@ -83,6 +105,9 @@ instance (Construct flag
          ) => IsTuple a flag where
   isTuple _ = construct 
 
+class Tupler n b | n -> b where
+  tupler :: n -> b
+  
 class Construct a where
   construct :: a
 instance Construct HFalse where
@@ -93,7 +118,7 @@ instance Construct HTrue where
 
 |]
 
-tupleMod n = intercalate [""] [header, tuplizeLvPairsLists n, tuplizeHLists n, untuplizeHLists n, isTuples n] 
+tupleMod n = intercalate [""] [header, tuplizeLvPairsLists n, tuplizeHLists n, untuplizeHLists n, isTuples n, tuplers n] 
 main = do n <- read . head <$> getArgs
           putStrLn . unlines $ tupleMod n
 
